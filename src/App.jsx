@@ -1,43 +1,54 @@
-import { useEffect, useState } from 'react'
-import reactLogo from './assets/react.svg'
-import { Box, Button, Text, VStack } from '@chakra-ui/react'
-import { ethers } from 'ethers'
-import Web3Modal from 'web3modal'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import { Box, Button, Input, Text, VStack } from "@chakra-ui/react";
+import { getEthBalance } from "./utils/ethers";
 
 function App() {
-  const [provider, setProvider] = useState(null);
-  const [account, setAccount] = useState(null);
-  
-  const connectWallet = async () => {
-    try {
-      const web3Modal = new Web3Modal();
-      const connection = await web3Modal.connect();
-      const newProvider = new ethers.BrowserProvider(connection);
-      const signer = await newProvider.getSigner();
-      const address = await signer.getAddress();
+  const [address, setAddress] = useState("");
+  const [balance, setBalance] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-      setProvider(newProvider);
-      setAccount(address);
-    } catch (error) {
-      console.error("Wallet connection failed:", error);
+  const fetchBalance = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      if (!address) throw new Error("Enter an address");
+      const bal = await getEthBalance(address, "mainnet"); // or "sepolia"
+      setBalance(bal);
+    } catch (e) {
+      setError(e.message || "Failed to fetch balance");
+      setBalance(null);
+    } finally {
+      setLoading(false);
     }
   };
 
-   return (
-    <Box p={10} textAlign="center" bg="gray.50" minH="100vh">
-      <VStack spacing={4}>
-        <Text fontSize="2xl" fontWeight="bold">
-          Smart Contract Explorer
-        </Text>
+  // Example prefill (optional)
+  useEffect(() => {
+    // setAddress("vitalik.eth") // ENS names are supported too
+  }, []);
 
-        {account ? (
-          <Text>Connected: {account}</Text>
-        ) : (
-          <Button colorScheme="teal" onClick={connectWallet}>
-            Connect Wallet
-          </Button>
+  return (
+    <Box p={8} bg="gray.50" minH="100vh">
+      <VStack spacing={4} maxW="xl" mx="auto">
+        <Text fontSize="2xl" fontWeight="bold">Smart Contract Explorer</Text>
+		<Text fontSize="1xl" fontWeight="bold">Get Wallet Balance:</Text>
+        <Input
+          placeholder="Enter wallet address or ENS name"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+        />
+
+        <Button colorScheme="teal" onClick={fetchBalance} isLoading={loading}>
+          Get Balance
+        </Button>
+
+        {error && <Text color="red.500">{error}</Text>}
+
+        {balance !== null && !error && (
+          <Text>
+            Balance: <strong>{balance}</strong> ETH
+          </Text>
         )}
       </VStack>
     </Box>
